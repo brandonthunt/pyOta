@@ -113,7 +113,6 @@ class streamFromRadio(tk.Tk):
             self.f.write(struct.pack('f'*len(inlv), *inlv))
             self.lab['text'] = "Filesize: {:.1f} MB".format(os.path.getsize(os.getcwd()+'/'+self.f.name)/1e6)
 
-
     def initSdr(self, fc):
         # TODO: throw a more intuitive error when radio is not connected
         usrp = uhd.usrp.MultiUSRP()
