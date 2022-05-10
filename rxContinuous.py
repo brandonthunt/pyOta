@@ -51,7 +51,6 @@ class streamFromRadio(tk.Tk):
         self.was_clicked = True
         self.queue.put('terminate')
 
-
     # use a "main" threading function to begin RX stream
     def threading(self, radio):
         # Call stream function
