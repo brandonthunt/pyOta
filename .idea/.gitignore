@@ -8,3 +8,4 @@
 /dataSources.local.xml
 # OTA Bins
 *.bin
+!100k_8_20seg_chan0_May11_22.bin
