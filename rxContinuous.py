@@ -20,7 +20,7 @@ class streamFromRadio(tk.Tk):
     rx_gain = 60
     fc = 6116e3
 
-    def __init__(self, rx_rate, fname, fc):
+    def __init__(self, rx_rate, fname, fc, fif=0):
         # create tkinter window
         super().__init__()
         self.geometry("200x50")
@@ -35,14 +35,18 @@ class streamFromRadio(tk.Tk):
 
         # initialize radio
         self.rx_rate = rx_rate
-        self.fc = fc
-        radio = self.initSdr(fc)
+        self.fc = fc+fif
+        radio = self.initSdr()
 
         # initialize file
-        self.f = open(fname, 'wb')              # create and open a binary file
-        self.threading(radio)                   # begin recording via threaded process
+        self.f = open(fname, 'wb')
+
+        # write IF, fc to beginning of metadata
+        fMetadata = np.array([fc, fif, rate], dtype=np.int32)
+        self.f.write(struct.pack('f'*len(fMetadata), *fMetadata))
 
         # begin from inside
+        self.threading(radio)  # begin recording via threaded process
         self.queue = queue.Queue()              # create a queue
         self.mainloop()                         # begin tkinter mainloop
 
@@ -112,18 +116,19 @@ class streamFromRadio(tk.Tk):
             self.f.write(struct.pack('f'*len(inlv), *inlv))
             self.lab['text'] = "Filesize: {:.1f} MB".format(os.path.getsize(os.getcwd()+'/'+self.f.name)/1e6)
 
-    def initSdr(self, fc):
+    def initSdr(self):
         # TODO: throw a more intuitive error when radio is not connected
         usrp = uhd.usrp.MultiUSRP()
         usrp.set_rx_rate(self.rx_rate)
-        usrp.set_rx_freq(uhd.types.TuneRequest(fc), 0)
+        usrp.set_rx_freq(uhd.types.TuneRequest(self.fc), 0)
         usrp.set_rx_gain(30)
         return usrp
 
 if __name__=="__main__":
     # Set parameters and begin
-    rate = 1e6
+    rate = 100e6/86
+    fif = 100e3                 # offset from carrier to remove DC spike
     fname = 'rxCont.bin'
     dir = 'rxBins/'
     fc = 6116e3
-    k = streamFromRadio(rate, dir+fname, fc)
+    k = streamFromRadio(rate, dir+fname, fc, fif)
