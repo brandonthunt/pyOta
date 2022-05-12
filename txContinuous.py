@@ -80,24 +80,29 @@ class txFromRadio(tk.Tk):
 
     # use a "main" threading function to begin RX stream
     def threading(self, radio):
+        threads = []        # empty list of threads
+
         # Call stream function
         t1 = Thread(target=self.txFromRad, args=[radio])
         t1.start()
-        self.after(100, self.checkQueue)
+        threads.append(t1)
+        self.after(100, self.checkQueue, threads)
 
-    def checkQueue(self):
+    def checkQueue(self, threads):
         """ Check if there is something in the queue. """
         try:
             # retrieve the queue
             self.result = self.queue.get(False)
         except queue.Empty:
             # poll the queue again after 100us if the queue was empty
-            self.after(100, self.checkQueue)
+            self.after(100, self.checkQueue, threads)
         else:
             # if we do NOT get an exception (queue not empty), then check queue.
             if self.result == 'terminate':
                 print("Acknowledging button press... transmission complete.")
                 self.queue.task_done()
+                for thr in threads:
+                    thr.join()
                 self.destroy()
             else:
                 # "catch" unknown queue elements.
