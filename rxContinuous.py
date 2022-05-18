@@ -63,6 +63,9 @@ class streamFromRadio(tk.Tk):
         self.after(100, self.checkQueue)
 
     def checkQueue(self):
+        # Update tk label
+        self.lab['text'] = "Filesize: {:.1f} MB".format(os.path.getsize(os.getcwd() + '/' + self.f.name) / 1e6)
+
         """ Check if there is something in the queue. """
         try:
             # retrieve the queue
@@ -114,7 +117,6 @@ class streamFromRadio(tk.Tk):
 
             # write 32-bit floats to file; update filesize label on window.
             self.f.write(struct.pack('f'*len(inlv), *inlv))
-            self.lab['text'] = "Filesize: {:.1f} MB".format(os.path.getsize(os.getcwd()+'/'+self.f.name)/1e6)
 
     def initSdr(self):
         # TODO: throw a more intuitive error when radio is not connected

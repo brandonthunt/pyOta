@@ -23,7 +23,7 @@ class txFromRadio(tk.Tk):
     rx_gain = 60
     fc = 6116e3
 
-    def __init__(self, rx_rate, fname, fc):
+    def __init__(self, tx_rate, fname, fc):
         # create tkinter window
         super().__init__()
         self.geometry("200x50")
@@ -37,9 +37,9 @@ class txFromRadio(tk.Tk):
         self.button.pack()
 
         # initialize radio
-        self.rx_rate = rx_rate
+        self.tx_rate = tx_rate
         self.fc = fc
-        radio = self.initSdr(fc)
+        radio = self.initSdr()
 
         # load the transmit file
         f = open(fname, 'rb')
@@ -56,7 +56,7 @@ class txFromRadio(tk.Tk):
                 break
 
         self.interp = buffer.pop(0)
-        self.modType = buffer.pop(0)
+        self.modType = chr(buffer.pop(0))
         self.B = buffer.pop(0)
 
         buffer = np.asarray(buffer, dtype=np.int32)
@@ -64,8 +64,7 @@ class txFromRadio(tk.Tk):
             buffer = buffer[0:-1]
 
         bufferc = buffer[::2] + 1j*buffer[1::2]
-        self.txPacket = bufferc.astype(np.complex64)/(2**32)                  # shift scaling from int32 -> np.complex64
-        #self.txPacket2 = np.exp(2j*np.pi*2000*np.arange(1e5)/1e6)
+        self.txPacket = bufferc.astype(np.csingle)/(2**32)                  # shift scaling from int32 -> np.complex64
 
         self.threading(radio)                   # begin recording via threaded process
 
@@ -89,6 +88,9 @@ class txFromRadio(tk.Tk):
         self.after(100, self.checkQueue, threads)
 
     def checkQueue(self, threads):
+        # update time elapsed label on window.
+        self.lab['text'] = "Time elapsed: {} sec".format(int(time.time() - self.start))
+
         """ Check if there is something in the queue. """
         try:
             # retrieve the queue
@@ -118,15 +120,15 @@ class txFromRadio(tk.Tk):
         st_args.channels = [0]
         streamer = radio.get_tx_stream(st_args)
         buffer_samps = streamer.get_max_num_samps()
-        tx_buffer = np.zeros((1, buffer_samps), dtype=np.complex64)
+        tx_buffer = np.zeros((1, buffer_samps), dtype=np.csingle)
 
         # initialize an empty interleaving buffer
         nsamps = 0
-        idx = 0
+        idx = -1*buffer_samps
         plen = len(self.txPacket)
 
         # begin stream from radio
-        start = time.time()
+        self.start = time.time()
 
         while not self.was_clicked:
             nsamps += streamer.send(tx_buffer, metadata)          # collect nsamps samples per loop
@@ -139,31 +141,30 @@ class txFromRadio(tk.Tk):
                 idx3 = idx + buffer_samps - plen
                 eop = self.txPacket[idx:idx2]
                 bop = self.txPacket[0:idx3]
-                tx_buffer = np.array(np.concatenate([eop, bop]), dtype=np.complex64)
+                tx_buffer = np.array(np.concatenate([eop, bop]), dtype=np.csingle)
+                idx = -1*buffer_samps
             else:
                 # normal slicing
-                tx_buffer = np.array(self.txPacket[idx:idx+buffer_samps], dtype=np.complex64)
-
-            # update time elapsed label on window.
-            self.lab['text'] = "Time elapsed: {} sec".format(int(time.time()-start))
+                tx_buffer = np.array(self.txPacket[idx:idx+buffer_samps], dtype=np.csingle)
 
         # Send a mini-packet signalling the end of burst.
         metadata.end_of_burst = True
-        streamer.send(np.zeros((1, 0), dtype=np.complex64), metadata)
+        streamer.send(np.zeros((1, 0), dtype=np.csingle), metadata)
 
 
-    def initSdr(self, fc):
+    def initSdr(self):
         # TODO: throw a more intuitive error when radio is not connected
         usrp = uhd.usrp.MultiUSRP()
-        usrp.set_tx_rate(self.rx_rate)
-        usrp.set_tx_freq(uhd.types.TuneRequest(fc), 0)
+        usrp.set_tx_rate(self.tx_rate)
+        usrp.set_tx_freq(uhd.types.TuneRequest(self.fc), 0)
         usrp.set_time_now(uhd.types.TimeSpec(0.0))
         return usrp
 
 if __name__=="__main__":
     # Set parameters and begin
     rate = 1e6
-    fname = '100k_8_20seg_chan0_May11_22.bin'
+    fname = '100k_8_20seg_chan0_May18_22.bin'
+    #fname = 'cw1000.bin'
     dir = 'txBins/'
     fc = 6116e3
     k = txFromRadio(rate, dir+fname, fc)
