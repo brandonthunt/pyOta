@@ -19,10 +19,8 @@ class txFromRadio(tk.Tk):
 
     # misc radio params
     # TODO: add argparse/kwargs here to parse the input
-    rx_rate = 1e6
     rx_channels = [0]
     rx_gain = 60
-    fc = 6116e3
 
     def __init__(self, tx_rate, fname, fc):
         # create tkinter window
@@ -174,7 +172,6 @@ if __name__=="__main__":
 
     rate = args.tx_rate
     fname = args.name
-    #fname = 'cw1000.bin'
     dir = 'txBins/'
     fc = args.center_freq
     k = txFromRadio(rate, dir+fname, fc)

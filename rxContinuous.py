@@ -15,11 +15,8 @@ class streamFromRadio(tk.Tk):
     was_clicked = False          # Is set to true upon button press. Ends recording after final pkt rx.
 
     # misc radio params
-    # TODO: add argparse/kwargs here to parse the input
-    rx_rate = 1e6
     rx_channels = [0]
     rx_gain = 60
-    fc = 6116e3
 
     def __init__(self, rx_rate, fname, fc, fif=0):
         # create tkinter window
@@ -65,7 +62,7 @@ class streamFromRadio(tk.Tk):
 
     def checkQueue(self):
         # Update tk label
-        self.lab['text'] = "Filesize: {:.1f} MB".format(os.path.getsize(os.getcwd() + '/' + self.f.name) / 1e6)
+        self.lab['text'] = "Filesize: {:.1f} MB".format(os.path.getsize(self.f.name) / 1e6)
 
         """ Check if there is something in the queue. """
         try:
@@ -131,26 +128,21 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("-n", "--name", help="name of saved file", type=str, default="rx.bin")
     parser.add_argument("-r", "--rx_rate", help="sampling rate of radio. Must be 100e6/{1:256} for N210 devices", type=int, default=1000000)
-    parser.add_argument("-o", "--offset_freq", help="offset frequency in KHz from carrier to avoid DC spike", type=float, default=100)
-    parser.add_argument("-f", "--center_freq", help="center frequency in KHz", type=float, required=True)
+    parser.add_argument("-o", "--offset_freq", help="offset frequency from carrier to avoid DC spike", type=float, default=100000)
+    parser.add_argument("-f", "--center_freq", help="center frequency", type=float, required=True)
     return parser.parse_args()
 
 if __name__=="__main__":
     # Set parameters and begin
     args = parse_args()
 
+    # assign args from parser
     rate = args.rx_rate
     fif = args.offset_freq
     fname = args.name
-    dir = "rxBins/"
+    dir = os.getcwd()
+    subdir = "/rxBins/"
     fc = args.center_freq
 
-    with open(dir+fname, 'wb') as f:
-        pass
-
-    # rate = 1e6
-    # fif = 100e3                 # offset from carrier to remove DC spike
-    # fname = 'rxCont.bin'
-    # dir = 'rxBins/'
-    # fc = 6116e3
-    k = streamFromRadio(rate, dir+fname, fc, fif)
+    # create Tk window and begin stream
+    k = streamFromRadio(rate, dir+subdir+fname, fc, fif)
