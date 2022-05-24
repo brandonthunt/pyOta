@@ -4,6 +4,7 @@ import numpy as np
 import queue
 import time
 from threading import *
+import argparse
 
 # ~~~ NOTE: Requires input mat files to be int32s ~~~
 # globals
@@ -160,11 +161,20 @@ class txFromRadio(tk.Tk):
         usrp.set_time_now(uhd.types.TimeSpec(0.0))
         return usrp
 
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-n", "--name", help="name of saved file", type=str, default="100k_8_20seg_chan0_May18_22.bin")
+    parser.add_argument("-r", "--tx_rate", help="sampling rate of radio. Must be 100e6/{1:256} for N210 devices", type=int, default=1e6)
+    parser.add_argument("-f", "--center_freq", help="center frequency", type=int, required=True)
+    return parser.parse_args()
+
 if __name__=="__main__":
     # Set parameters and begin
-    rate = 1e6
-    fname = '100k_8_20seg_chan0_May18_22.bin'
+    args = parse_args()
+
+    rate = args.tx_rate
+    fname = args.name
     #fname = 'cw1000.bin'
     dir = 'txBins/'
-    fc = 6116e3
+    fc = args.center_freq
     k = txFromRadio(rate, dir+fname, fc)

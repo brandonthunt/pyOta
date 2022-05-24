@@ -5,6 +5,7 @@ import numpy as np
 import os
 import queue
 import struct
+import argparse
 
 # Create Object
 class streamFromRadio(tk.Tk):
@@ -126,11 +127,30 @@ class streamFromRadio(tk.Tk):
         usrp.set_rx_gain(30)
         return usrp
 
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-n", "--name", help="name of saved file", type=str, default="rx.bin")
+    parser.add_argument("-r", "--rx_rate", help="sampling rate of radio. Must be 100e6/{1:256} for N210 devices", type=int, default=1000000)
+    parser.add_argument("-o", "--offset_freq", help="offset frequency in KHz from carrier to avoid DC spike", type=float, default=100)
+    parser.add_argument("-f", "--center_freq", help="center frequency in KHz", type=float, required=True)
+    return parser.parse_args()
+
 if __name__=="__main__":
     # Set parameters and begin
-    rate = 100e6/86
-    fif = 100e3                 # offset from carrier to remove DC spike
-    fname = 'rxCont.bin'
-    dir = 'rxBins/'
-    fc = 6116e3
+    args = parse_args()
+
+    rate = args.rx_rate
+    fif = args.offset_freq
+    fname = args.name
+    dir = "rxBins/"
+    fc = args.center_freq
+
+    with open(dir+fname, 'wb') as f:
+        pass
+
+    # rate = 1e6
+    # fif = 100e3                 # offset from carrier to remove DC spike
+    # fname = 'rxCont.bin'
+    # dir = 'rxBins/'
+    # fc = 6116e3
     k = streamFromRadio(rate, dir+fname, fc, fif)
