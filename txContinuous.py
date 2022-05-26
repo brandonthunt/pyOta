@@ -19,12 +19,10 @@ class txFromRadio(tk.Tk):
 
     # misc radio params
     # TODO: add argparse/kwargs here to parse the input
-    rx_rate = 1e6
     rx_channels = [0]
-    rx_gain = 60
     fc = 6116e3
 
-    def __init__(self, tx_rate, fname, fc):
+    def __init__(self, tx_rate, fname, fc, gain):
         # create tkinter window
         super().__init__()
         self.geometry("200x50")
@@ -40,6 +38,7 @@ class txFromRadio(tk.Tk):
         # initialize radio
         self.tx_rate = tx_rate
         self.fc = fc
+        self.gain = gain
         radio = self.initSdr()
 
         # load the transmit file
@@ -159,12 +158,14 @@ class txFromRadio(tk.Tk):
         usrp.set_tx_rate(self.tx_rate)
         usrp.set_tx_freq(uhd.types.TuneRequest(self.fc), 0)
         usrp.set_time_now(uhd.types.TimeSpec(0.0))
+        usrp.set_tx_gain(self.gain)
         return usrp
 
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("-n", "--name", help="name of saved file", type=str, default="100k_8_20seg_chan0_May18_22.bin")
     parser.add_argument("-r", "--tx_rate", help="sampling rate of radio. Must be 100e6/{1:256} for N210 devices", type=int, default=1e6)
+    parser.add_argument("-g", "--gain", help="set the rx gain [dB]", type=int, default=0)
     parser.add_argument("-f", "--center_freq", help="center frequency", type=int, required=True)
     return parser.parse_args()
 
@@ -174,7 +175,8 @@ if __name__=="__main__":
 
     rate = args.tx_rate
     fname = args.name
+    gain = args.gain
     #fname = 'cw1000.bin'
     dir = 'txBins/'
     fc = args.center_freq
-    k = txFromRadio(rate, dir+fname, fc)
+    k = txFromRadio(rate, dir+fname, fc, gain)
