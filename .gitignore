@@ -1,2 +1,3 @@
 *.bin
 rxBins/*.bin
+!txBins/cw.bin
