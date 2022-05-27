@@ -18,7 +18,7 @@ class txFromRadio(tk.Tk):
     stream_buff = []            # placeholder for our buffer of streamed samples
     was_clicked = False         # Is set to true upon button press. Ends recording after final pkt rx.
     pMod = 0.01                 # default power level to -20dB
-    pwrVec = [1, 0.1, 0.01, 0.001, 0.0001]
+    pwrVec = [15, 0.1, 0.01, 0.001, 0.0001]
 
     # misc radio params
     rx_channels = [0]
