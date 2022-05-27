@@ -16,9 +16,13 @@ class streamFromRadio(tk.Tk):
 
     # misc radio params
     rx_channels = [0]
+<<<<<<< HEAD
     rx_gain = 60
+=======
+    fc = 6116e3
+>>>>>>> if_tx
 
-    def __init__(self, rx_rate, fname, fc, fif=0):
+    def __init__(self, rx_rate, fname, fc, rx_gain, fif=0):
         # create tkinter window
         super().__init__()
         self.geometry("200x50")
@@ -34,7 +38,9 @@ class streamFromRadio(tk.Tk):
         # initialize radio
         self.rx_rate = rx_rate
         self.fc = fc+fif
+        self.rx_gain = rx_gain
         radio = self.initSdr()
+
 
         # initialize file
         self.f = open(fname, 'wb')
@@ -58,6 +64,7 @@ class streamFromRadio(tk.Tk):
         # Call stream function
         t1 = Thread(target=self.streamFromRad, args=[radio])
         t1.start()
+
         self.after(100, self.checkQueue)
 
     def checkQueue(self):
@@ -121,15 +128,16 @@ class streamFromRadio(tk.Tk):
         usrp = uhd.usrp.MultiUSRP()
         usrp.set_rx_rate(self.rx_rate)
         usrp.set_rx_freq(uhd.types.TuneRequest(self.fc), 0)
-        usrp.set_rx_gain(30)
+        usrp.set_rx_gain(self.rx_gain)
         return usrp
 
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("-n", "--name", help="name of saved file", type=str, default="rx.bin")
     parser.add_argument("-r", "--rx_rate", help="sampling rate of radio. Must be 100e6/{1:256} for N210 devices", type=int, default=1000000)
-    parser.add_argument("-o", "--offset_freq", help="offset frequency from carrier to avoid DC spike", type=float, default=100000)
-    parser.add_argument("-f", "--center_freq", help="center frequency", type=float, required=True)
+    parser.add_argument("-o", "--offset_freq", help="offset frequency in KHz from carrier to avoid DC spike", type=float, default=100)
+    parser.add_argument("-g", "--gain", help="set the rx gain [dB]",type=int, default=0)
+    parser.add_argument("-f", "--center_freq", help="center frequency in KHz", type=float, required=True)
     return parser.parse_args()
 
 if __name__=="__main__":
@@ -140,9 +148,24 @@ if __name__=="__main__":
     rate = args.rx_rate
     fif = args.offset_freq
     fname = args.name
-    dir = os.getcwd()
-    subdir = "/rxBins/"
+# <<<<<<< HEAD
+#     dir = os.getcwd()
+#     subdir = "/rxBins/"
+#     fc = args.center_freq
+#
+#     # create Tk window and begin stream
+#     k = streamFromRadio(rate, dir+subdir+fname, fc, fif)
+# =======
+    rx_gain = args.gain
+    dir = "rxBins/"
     fc = args.center_freq
 
-    # create Tk window and begin stream
-    k = streamFromRadio(rate, dir+subdir+fname, fc, fif)
+    with open(dir+fname, 'wb') as f:
+        pass
+
+    # rate = 1e6
+    # fif = 100e3                 # offset from carrier to remove DC spike
+    # fname = 'rxCont.bin'
+    # dir = 'rxBins/'
+    # fc = 6116e3
+    k = streamFromRadio(rate, dir+fname, fc, rx_gain, fif)
