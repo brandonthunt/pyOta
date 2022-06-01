@@ -54,6 +54,10 @@ class txFromRadio(tk.Tk):
         self.modType = chr(buffer.pop(0))
         self.B = buffer.pop(0)
 
+        self.Pavg = buffer.pop(0)/1e3       # in dBm
+        self.Ppeak = buffer.pop(0)/1e3      # in dBm
+        self.Wtot = buffer.pop(0)           # in Hz
+
         if self.modType == "b":
             self.modType = "biortho"
         elif self.modType == "o":
@@ -76,12 +80,17 @@ class txFromRadio(tk.Tk):
         self.rate = tk.Label(self, text="fc={:.4} kHz".format(self.fc/1e3))
         self.mt = tk.Label(self, text="modulation: "+self.modType)
         self.blab = tk.Label(self, text="mod order: {} bits/sym".format(self.B))
+        self.pAvg = tk.Label(self, text="avg pwr: {} dBM".format(self.Pavg))
+        self.pMax = tk.Label(self, text="max pwr: {} dBM".format(self.Ppeak))
         self.lab = tk.Label(self, text="Time elapsed: ")
 
         self.rate.pack()
         self.mt.pack()
         self.blab.pack()
-        self.lab.pack()
+        self.pAvg.pack()
+        self.pMax.pack()
+        self.lab.pack(pady=15)
+
 
         # create radio buttons for power control
         self.pSetIdx = tk.IntVar()
