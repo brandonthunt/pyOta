@@ -16,13 +16,8 @@ class streamFromRadio(tk.Tk):
 
     # misc radio params
     rx_channels = [0]
-<<<<<<< HEAD
-    rx_gain = 60
-=======
-    fc = 6116e3
->>>>>>> if_tx
 
-    def __init__(self, rx_rate, fname, fc, rx_gain, fif=0):
+    def __init__(self, rx_rate, fname, fc, rx_gain, fif):
         # create tkinter window
         super().__init__()
         self.geometry("200x50")
@@ -121,7 +116,7 @@ class streamFromRadio(tk.Tk):
             inlv[1::2] = recv_buffer[0, :].real
 
             # write 32-bit floats to file; update filesize label on window.
-            self.f.write(struct.pack('f'*len(inlv), *inlv))
+            self.f.write(struct.pack('f'*len(inlv), *inlv))         # 'f' datatype == float (4 bytes) for each real and imag
 
     def initSdr(self):
         # TODO: throw a more intuitive error when radio is not connected
@@ -135,9 +130,9 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("-n", "--name", help="name of saved file", type=str, default="rx.bin")
     parser.add_argument("-r", "--rx_rate", help="sampling rate of radio. Must be 100e6/{1:256} for N210 devices", type=int, default=1000000)
-    parser.add_argument("-o", "--offset_freq", help="offset frequency in KHz from carrier to avoid DC spike", type=float, default=100)
+    parser.add_argument("-o", "--offset_freq", help="offset frequency in Hz from carrier to avoid DC spike", type=float, default=100000)
     parser.add_argument("-g", "--gain", help="set the rx gain [dB]",type=int, default=0)
-    parser.add_argument("-f", "--center_freq", help="center frequency in KHz", type=float, required=True)
+    parser.add_argument("-f", "--center_freq", help="center frequency in Hz", type=float, required=True)
     return parser.parse_args()
 
 if __name__=="__main__":
@@ -148,14 +143,6 @@ if __name__=="__main__":
     rate = args.rx_rate
     fif = args.offset_freq
     fname = args.name
-# <<<<<<< HEAD
-#     dir = os.getcwd()
-#     subdir = "/rxBins/"
-#     fc = args.center_freq
-#
-#     # create Tk window and begin stream
-#     k = streamFromRadio(rate, dir+subdir+fname, fc, fif)
-# =======
     rx_gain = args.gain
     dir = "rxBins/"
     fc = args.center_freq
@@ -163,9 +150,4 @@ if __name__=="__main__":
     with open(dir+fname, 'wb') as f:
         pass
 
-    # rate = 1e6
-    # fif = 100e3                 # offset from carrier to remove DC spike
-    # fname = 'rxCont.bin'
-    # dir = 'rxBins/'
-    # fc = 6116e3
     k = streamFromRadio(rate, dir+fname, fc, rx_gain, fif)
