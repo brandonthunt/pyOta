@@ -99,6 +99,10 @@ class streamFromRadio(tk.Tk):
         stream_cmd.stream_now = True
         streamer.issue_stream_cmd(stream_cmd)
 
+        # init a metadata var
+        metadata = uhd.types.RXMetadata()
+        had_an_overflow = False
+
         # initialize an empty interleaving buffer
         inlv = [0] * 2 * buffer_samps
 
@@ -117,6 +121,35 @@ class streamFromRadio(tk.Tk):
 
             # write 32-bit floats to file; update filesize label on window.
             self.f.write(struct.pack('f'*len(inlv), *inlv))         # 'f' datatype == float (4 bytes) for each real and imag
+
+            recv_buffer = np.zeros((1, buffer_samps), dtype=np.complex64)
+
+            # Handle the error codes
+            if metadata.error_code == uhd.types.RXMetadataErrorCode.none:
+                # Reset the overflow flag
+                if had_an_overflow:
+                    had_an_overflow = False
+                    num_rx_dropped += (metadata.time_spec - last_overflow).to_ticks(rate)
+            elif metadata.error_code == uhd.types.RXMetadataErrorCode.overflow:
+                had_an_overflow = True
+                # Need to make sure that last_overflow is a new TimeSpec object, not
+                # a reference to metadata.time_spec, or it would not be useful
+                # further up.
+                last_overflow = uhd.types.TimeSpec(
+                    metadata.time_spec.get_full_secs(),
+                    metadata.time_spec.get_frac_secs())
+                # If we had a sequence error, record it
+                if metadata.out_of_sequence:
+                    print('sequence error')
+                # Otherwise just count the overrun
+                else:
+                    print('overrun line 143')
+            elif metadata.error_code == uhd.types.RXMetadataErrorCode.late:
+                print('receiver late error')
+            elif metadata.error_code == uhd.types.RXMetadataErrorCode.timeout:
+                print('timeout')
+            else:
+                print("Receiver error")
 
     def initSdr(self):
         # TODO: throw a more intuitive error when radio is not connected
@@ -144,7 +177,8 @@ if __name__=="__main__":
     fif = args.offset_freq
     fname = args.name
     rx_gain = args.gain
-    dir = "rxBins/"
+    # dir = "/home/hf/Documents/pyRad/pyOta/rxBins/"
+    dir = os.getcwd() + '/rxBins/'
     fc = args.center_freq
 
     with open(dir+fname, 'wb') as f:
