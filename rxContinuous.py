@@ -164,7 +164,7 @@ def parse_args():
     parser.add_argument("-n", "--name", help="name of saved file", type=str, default="rx.bin")
     parser.add_argument("-r", "--rx_rate", help="sampling rate of radio. Must be 100e6/{1:256} for N210 devices", type=int, default=1000000)
     parser.add_argument("-o", "--offset_freq", help="offset frequency in Hz from carrier to avoid DC spike", type=float, default=100000)
-    parser.add_argument("-g", "--gain", help="set the rx gain [dB]",type=int, default=0)
+    parser.add_argument("-g", "--gain", help="set the rx gain [dB]",type=int, default=60)
     parser.add_argument("-f", "--center_freq", help="center frequency in Hz", type=float, required=True)
     return parser.parse_args()
 
