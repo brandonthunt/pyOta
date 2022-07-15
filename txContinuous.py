@@ -64,7 +64,7 @@ class txFromRadio(tk.Tk):
             self.modType = "ortho"
         elif self.modType == "c":
             self.modType = "cw"
-        elif sel.modType == "p":
+        elif self.modType == "p":
             self.modType = "pilot"
         else:
             print("unrecognized mod type!")
