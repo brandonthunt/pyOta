@@ -41,7 +41,7 @@ class streamFromRadio(tk.Tk):
         self.f = open(fname, 'wb')
 
         # write IF, fc to beginning of metadata
-        fMetadata = np.array([fc, fif, rate], dtype=np.int32)
+        fMetadata = np.array([fc, fif, rx_rate], dtype=np.int32)
         self.f.write(struct.pack('f'*len(fMetadata), *fMetadata))
 
         # begin from inside
