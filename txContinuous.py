@@ -33,6 +33,13 @@ class txFromRadio(tk.Tk):
         self.tx_gain = tx_gain
         radio = self.initSdr()
 
+        # if there was no radio found...
+        if radio == 0:
+            self.update()  # update the Tk window to prevent an error when we destroy
+            self.destroy()
+            msgWindow("No radio found!", "#E55", "#FFF")
+            return
+
         # create a debug file if desired
         self.debug = debug
         if debug:
@@ -219,12 +226,36 @@ class txFromRadio(tk.Tk):
 
     def initSdr(self):
         # TODO: throw a more intuitive error when radio is not connected
-        usrp = uhd.usrp.MultiUSRP()
+        try:
+            usrp = uhd.usrp.MultiUSRP()
+        except RuntimeError:
+            return 0
+
         usrp.set_tx_rate(self.tx_rate)
         usrp.set_tx_gain(self.tx_gain)
         usrp.set_tx_freq(uhd.types.TuneRequest(self.fc), 0)
         usrp.set_time_now(uhd.types.TimeSpec(0.0))
         return usrp
+
+class msgWindow(tk.Tk):
+    def __init__(self, message, bgcolor="#DDD", fgcolor="#000"):
+        # create tkinter window
+        super().__init__()
+        self.geometry("200x75")
+
+        # create labels and button
+        self.lab = tk.Label(self, text=message, fg=fgcolor, bg =bgcolor)
+        self.lab.pack(pady=10)
+
+        self.button = tk.Button(self, text="Close window")
+        self.button['command'] = self.on_click
+        self.button.pack()
+
+        self.configure(bg=bgcolor)
+        self.mainloop()
+
+    def on_click(self):
+        self.destroy()
 
 def parse_args():
     parser = argparse.ArgumentParser()

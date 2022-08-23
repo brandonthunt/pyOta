@@ -1,20 +1,19 @@
 from rxContinuous import streamFromRadio as sfr
-import numpy as np
 import datetime as dt
 import queue
 import tkinter as tk
 import uuid
-from threading import *
+
 
 class ezRxWindow(tk.Tk):
     # --- attributes ---
     # empty list for streamed samples
     rx_gain = 8
     offset_freq = 100000
-    rx_rate = 100e6/100
+    rx_rate = 100e6 / 100
     fname = []
     dir = 'rxBins/'
-    fileSizeCap = 2**9
+    fileSizeCap = 2 ** 9
 
     def __init__(self):
         # create tkinter window
@@ -36,9 +35,9 @@ class ezRxWindow(tk.Tk):
         self.droplab = tk.Label(self, text="Packet selection: ")
         self.droplab.pack(pady=1)
         self.clicked = tk.StringVar()
-        self.clicked.set("Click to select")                                # default string
-        self.nPackets = 10                                                 # number of packet options to support
-        self.pktOptions = ["Packet " + str(i) for i in range(self.nPackets)]       # packet selection options
+        self.clicked.set("Click to select")  # default string
+        self.nPackets = 10  # number of packet options to support
+        self.pktOptions = ["Packet " + str(i) for i in range(self.nPackets)]  # packet selection options
         self.drop = tk.OptionMenu(self, self.clicked, *self.pktOptions)
         self.drop.pack()
 
@@ -79,7 +78,7 @@ class ezRxWindow(tk.Tk):
         # read fc input and throw error if invalid
         try:
             fchz = float(self.fcbox.get("1.0", "end-1c"))
-            self.fc = 1000*fchz
+            self.fc = 1000 * fchz
         except ValueError:
             self.errLab['text'] = "Invalid center frequency!"
             self.errLab['fg'] = "#e00"
@@ -93,7 +92,7 @@ class ezRxWindow(tk.Tk):
         else:
             fnamesel = self.clicked.get()
             fNameOpts = ["pkt" + str(i) for i in range(self.nPackets)]
-            pktSel = fNameOpts[self.pktOptions.index(fnamesel)]            # shorten name to "pktX" where X \elem [0, nPackets-1]
+            pktSel = fNameOpts[self.pktOptions.index(fnamesel)]  # shorten name to "pktX" where X \elem [0, nPackets-1]
             utc = dt.datetime.utcnow()
             self.utcStr = utc.strftime("_%b%d_%H%M")
             ftype = '.bin'
@@ -115,7 +114,6 @@ class ezRxWindow(tk.Tk):
             self.errLab['text'] = "Invalid filesize length!"
             self.errLab['fg'] = "#e00"
             return 1
-
 
     def checkQueue(self):
         """ Check if there is something in the queue. """
@@ -171,7 +169,10 @@ class ezRxWindow(tk.Tk):
             f.write(row)
             row = "f_offset = " + str(self.offset_freq) + " Hz\n"
             f.write(row)
-            row = "filename for this sequence begins with: " + self.fname[0:6] + ">" + self.fname[7:-4] + "_0_" + macunString[-6:] + self.fname[-4:] + "\n"
+            row = "filename for this sequence begins with: " + self.fname[0:6] + ">" + self.fname[
+                                                                                       7:-4] + "_0_" + macunString[
+                                                                                                       -6:] + self.fname[
+                                                                                                              -4:] + "\n"
             f.write(row)
             row = "filesize cap: " + str(self.fileSizeCap) + " MB\n"
             f.write(row)
@@ -180,9 +181,6 @@ class ezRxWindow(tk.Tk):
             f.write('==================================================\n')
 
 
-
 # If we run this file as the main script...
-if __name__=="__main__":
-    k = ezRxWindow()
-
-
+if __name__ == "__main__":
+    ezRxWindow()

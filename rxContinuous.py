@@ -208,7 +208,6 @@ class streamFromRadio(tk.Tk):
 
 
     def initSdr(self):
-        # TODO: throw a more intuitive error when radio is not connected
         try:
             usrp = uhd.usrp.MultiUSRP()
         except RuntimeError:
