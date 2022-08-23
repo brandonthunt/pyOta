@@ -56,7 +56,7 @@ class streamFromRadio(tk.Tk):
         if self.radio == 0:
             self.update()                       # update the Tk window to prevent an error when we destroy
             self.destroy()
-            errorWindow("No radio found!")
+            msgWindow("No radio found!", "#E55", "#FFF")
             return
 
         # index filename if a filesize limit is specified
@@ -105,6 +105,8 @@ class streamFromRadio(tk.Tk):
                 self.queue.task_done()
                 self.t1.join()
                 self.destroy()
+                if self.recordTimeout:
+                    msgWindow("Time limit reached.")
 
             elif self.result == 'fileSizeLimReached':
                 # all we do here is set the flag and jump out
@@ -171,34 +173,6 @@ class streamFromRadio(tk.Tk):
                 self.f.write(struct.pack('f'*len(inlv), *inlv))         # 'f' datatype == float (4 bytes) for each real and imag
 
                 recv_buffer = np.zeros((1, buffer_samps), dtype=np.complex64)
-                num_rx_dropped = 0
-
-                # # Handle the error codes
-                # if metadata.error_code == uhd.types.RXMetadataErrorCode.none:
-                #     # Reset the overflow flag
-                #     if had_an_overflow:
-                #         had_an_overflow = False
-                #         num_rx_dropped += (metadata.time_spec - last_overflow).to_ticks(rate)
-                # elif metadata.error_code == uhd.types.RXMetadataErrorCode.overflow:
-                #     had_an_overflow = True
-                #     # Need to make sure that last_overflow is a new TimeSpec object, not
-                #     # a reference to metadata.time_spec, or it would not be useful
-                #     # further up.
-                #     last_overflow = uhd.types.TimeSpec(
-                #         metadata.time_spec.get_full_secs(),
-                #         metadata.time_spec.get_frac_secs())
-                #     # If we had a sequence error, record it
-                #     if metadata.out_of_sequence:
-                #         print('sequence error')
-                #     # Otherwise just count the overrun
-                #     else:
-                #         print('overrun line 143')
-                # elif metadata.error_code == uhd.types.RXMetadataErrorCode.late:
-                #     print('receiver late error')
-                # elif metadata.error_code == uhd.types.RXMetadataErrorCode.timeout:
-                #     print('timeout')
-                # else:
-                #     print("Receiver error")
 
                 # calculate filesize, check for overlength
                 if self.fileSizeLim:
@@ -263,21 +237,21 @@ class streamFromRadio(tk.Tk):
         self.fileNum += 1
 
 
-class errorWindow(tk.Tk):
-    def __init__(self, message):
+class msgWindow(tk.Tk):
+    def __init__(self, message, bgcolor="#DDD", fgcolor="#000"):
         # create tkinter window
         super().__init__()
         self.geometry("200x75")
 
         # create labels and button
-        self.lab = tk.Label(self, text=message, fg='#fff', bg = '#F55')
+        self.lab = tk.Label(self, text=message, fg=fgcolor, bg =bgcolor)
         self.lab.pack(pady=10)
 
         self.button = tk.Button(self, text="Close window")
         self.button['command'] = self.on_click
         self.button.pack()
 
-        self.configure(bg='#F55')
+        self.configure(bg=bgcolor)
         self.mainloop()
 
     def on_click(self):
