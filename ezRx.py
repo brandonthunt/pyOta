@@ -14,11 +14,12 @@ class ezRxWindow(tk.Tk):
     rx_rate = 100e6/100
     fname = []
     dir = 'rxBins/'
+    fileSizeCap = 2**9
 
     def __init__(self):
         # create tkinter window
         super().__init__()
-        self.geometry("200x225")
+        self.geometry("200x360")
 
         # initialize Queue and begin polling
         self.queue = queue.Queue()
@@ -40,6 +41,20 @@ class ezRxWindow(tk.Tk):
         self.pktOptions = ["Packet " + str(i) for i in range(self.nPackets)]       # packet selection options
         self.drop = tk.OptionMenu(self, self.clicked, *self.pktOptions)
         self.drop.pack()
+
+        # create recording length option
+        self.rlab = tk.Label(self, text="Recording length [mins]:")
+        self.rlab.pack(pady=3)
+        self.recLen = tk.Text(self, height=1, width=20, pady=1)
+        self.recLen.pack(pady=5)
+        self.recLen.insert("1.0", '10')
+
+        # create filesize option
+        self.flab = tk.Label(self, text="Filesize limit [MB]:")
+        self.flab.pack()
+        self.fs = tk.Text(self, height=1, width=20, pady=1)
+        self.fs.pack(pady=5)
+        self.fs.insert("1.0", str(self.fileSizeCap))
 
         # create button & assoc. command
         self.button = tk.Button(self, text="Begin Recording")
@@ -84,6 +99,23 @@ class ezRxWindow(tk.Tk):
             ftype = '.bin'
             self.fname = self.dir + pktSel + self.utcStr + ftype
 
+        # read recording length input and throw error if invalid
+        try:
+            recLen = float(self.recLen.get("1.0", "end-1c"))
+            self.recLenInput = recLen
+        except ValueError:
+            self.errLab['text'] = "Invalid recording length!"
+            self.errLab['fg'] = "#e00"
+            return 1
+
+        # read recording length input and throw error if invalid
+        try:
+            self.fileSizeCap = float(self.fs.get("1.0", "end-1c"))
+        except ValueError:
+            self.errLab['text'] = "Invalid filesize length!"
+            self.errLab['fg'] = "#e00"
+            return 1
+
 
     def checkQueue(self):
         """ Check if there is something in the queue. """
@@ -105,7 +137,7 @@ class ezRxWindow(tk.Tk):
                     self.checkQueue()
                     return
 
-                # Create logger file
+                # Write to logger file
                 self.writeLog()
 
                 # Destroy current window, spawn stream-record window from rxContinuous.py
@@ -116,8 +148,8 @@ class ezRxWindow(tk.Tk):
                     self.fc,
                     self.rx_gain,
                     self.offset_freq,
-                    2**4,
-                    0.05)
+                    self.fileSizeCap,
+                    self.recLenInput)
             else:
                 # "catch" unknown queue elements.
                 print('unknown item in queue...')
@@ -137,6 +169,10 @@ class ezRxWindow(tk.Tk):
             row = "f_offset = " + str(self.offset_freq) + " Hz\n"
             f.write(row)
             row = "filename for this sequence begins with: " + self.fname[0:6] + ">" + self.fname[7:-4] + "_0" + self.fname[-4:] + "\n"
+            f.write(row)
+            row = "filesize cap: " + str(self.fileSizeCap) + " MB\n"
+            f.write(row)
+            row = "Recording time limit: " + str(self.recLenInput) + " min\n"
             f.write(row)
             f.write('==================================================\n')
 
