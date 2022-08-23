@@ -52,17 +52,24 @@ class streamFromRadio(tk.Tk):
         self.fileSizeLim = fileSizeLim
         self.radio = self.initSdr()
 
+        # if there was no radio found...
+        if self.radio == 0:
+            self.update()                       # update the Tk window to prevent an error when we destroy
+            self.destroy()
+            errorWindow("No radio found!")
+            return
+
         # index filename if a filesize limit is specified
         self.fNameIn = fname
         self.createFile()
 
         # handle timings
         self.timeOutLen = timeOutMins*60        # seconds
-        self.tStart = time.time()
+        self.tStart = time.time()               # record start time
 
         # begin from inside
-        self.threading()  # begin recording via threaded process
-        self.queue = queue.Queue()              # create a queue
+        self.threading()                        # begin recording via threaded process
+        self.queue = queue.Queue()  # create a queue
         self.mainloop()                         # begin tkinter mainloop
 
     def on_click(self):
@@ -75,7 +82,6 @@ class streamFromRadio(tk.Tk):
         # Call stream function
         self.t1 = Thread(target=self.streamFromRad, args=[self.radio])
         self.t1.start()
-
         self.after(100, self.checkQueue)
 
     def checkQueue(self):
@@ -99,10 +105,8 @@ class streamFromRadio(tk.Tk):
                 self.queue.task_done()
                 self.t1.join()
                 self.destroy()
-            elif self.result == 'fileSizeLimReached':
-                # print statement for debug
-                # print('Filesize maximum reached, closing and saving this file')
 
+            elif self.result == 'fileSizeLimReached':
                 # all we do here is set the flag and jump out
                 self.isOverLength = 1
                 self.queue.task_done()
@@ -169,32 +173,32 @@ class streamFromRadio(tk.Tk):
                 recv_buffer = np.zeros((1, buffer_samps), dtype=np.complex64)
                 num_rx_dropped = 0
 
-                # Handle the error codes
-                if metadata.error_code == uhd.types.RXMetadataErrorCode.none:
-                    # Reset the overflow flag
-                    if had_an_overflow:
-                        had_an_overflow = False
-                        num_rx_dropped += (metadata.time_spec - last_overflow).to_ticks(rate)
-                elif metadata.error_code == uhd.types.RXMetadataErrorCode.overflow:
-                    had_an_overflow = True
-                    # Need to make sure that last_overflow is a new TimeSpec object, not
-                    # a reference to metadata.time_spec, or it would not be useful
-                    # further up.
-                    last_overflow = uhd.types.TimeSpec(
-                        metadata.time_spec.get_full_secs(),
-                        metadata.time_spec.get_frac_secs())
-                    # If we had a sequence error, record it
-                    if metadata.out_of_sequence:
-                        print('sequence error')
-                    # Otherwise just count the overrun
-                    else:
-                        print('overrun line 143')
-                elif metadata.error_code == uhd.types.RXMetadataErrorCode.late:
-                    print('receiver late error')
-                elif metadata.error_code == uhd.types.RXMetadataErrorCode.timeout:
-                    print('timeout')
-                else:
-                    print("Receiver error")
+                # # Handle the error codes
+                # if metadata.error_code == uhd.types.RXMetadataErrorCode.none:
+                #     # Reset the overflow flag
+                #     if had_an_overflow:
+                #         had_an_overflow = False
+                #         num_rx_dropped += (metadata.time_spec - last_overflow).to_ticks(rate)
+                # elif metadata.error_code == uhd.types.RXMetadataErrorCode.overflow:
+                #     had_an_overflow = True
+                #     # Need to make sure that last_overflow is a new TimeSpec object, not
+                #     # a reference to metadata.time_spec, or it would not be useful
+                #     # further up.
+                #     last_overflow = uhd.types.TimeSpec(
+                #         metadata.time_spec.get_full_secs(),
+                #         metadata.time_spec.get_frac_secs())
+                #     # If we had a sequence error, record it
+                #     if metadata.out_of_sequence:
+                #         print('sequence error')
+                #     # Otherwise just count the overrun
+                #     else:
+                #         print('overrun line 143')
+                # elif metadata.error_code == uhd.types.RXMetadataErrorCode.late:
+                #     print('receiver late error')
+                # elif metadata.error_code == uhd.types.RXMetadataErrorCode.timeout:
+                #     print('timeout')
+                # else:
+                #     print("Receiver error")
 
                 # calculate filesize, check for overlength
                 if self.fileSizeLim:
@@ -231,7 +235,11 @@ class streamFromRadio(tk.Tk):
 
     def initSdr(self):
         # TODO: throw a more intuitive error when radio is not connected
-        usrp = uhd.usrp.MultiUSRP()
+        try:
+            usrp = uhd.usrp.MultiUSRP()
+        except RuntimeError:
+            return 0
+
         usrp.set_rx_rate(self.rx_rate)
         usrp.set_rx_freq(uhd.types.TuneRequest(self.fc), 0)
         usrp.set_rx_gain(self.rx_gain)
@@ -253,6 +261,30 @@ class streamFromRadio(tk.Tk):
         fMetadata = np.array([self.fc-self.fif, self.fif, self.rx_rate], dtype=np.int32)
         self.f.write(struct.pack('f' * len(fMetadata), *fMetadata))
         self.fileNum += 1
+
+
+class errorWindow(tk.Tk):
+    def __init__(self, message):
+        # create tkinter window
+        super().__init__()
+        self.geometry("200x75")
+
+        # create labels and button
+        self.lab = tk.Label(self, text=message, fg='#fff', bg = '#F55')
+        self.lab.pack(pady=10)
+
+        self.button = tk.Button(self, text="Close window")
+        self.button['command'] = self.on_click
+        self.button.pack()
+
+        self.configure(bg='#F55')
+        self.mainloop()
+
+    def on_click(self):
+        self.destroy()
+
+
+
 
 def parse_args():
     parser = argparse.ArgumentParser()
