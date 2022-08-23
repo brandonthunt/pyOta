@@ -7,6 +7,7 @@ import queue
 import struct
 import argparse
 import time
+import uuid
 
 
 # Define object
@@ -239,7 +240,9 @@ class streamFromRadio(tk.Tk):
     def createFile(self):
         if self.fileSizeLim:
             self.fnameTrunc = self.fNameIn[:-4]
-            fname = self.fnameTrunc + '_' + str(self.fileNum) + '.bin'
+            macFormat = [''.join(['{:02x}'.format((uuid.getnode() >> ele) & 0xff) for ele in range(0, 8 * 6, 8)][::-1])]
+            macString = ''.join(macFormat)
+            fname = self.fnameTrunc + '_' + str(self.fileNum) + '_' + macString[-6:] + '.bin'
         else:
             fname = self.fNameIn
 

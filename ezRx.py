@@ -156,10 +156,13 @@ class ezRxWindow(tk.Tk):
 
     def writeLog(self):
         # Open/create text file for logging
-        with open(self.dir + 'rxLog.txt', 'a') as f:
+        macFormat = [':'.join(['{:02x}'.format((uuid.getnode() >> ele) & 0xff) for ele in range(0, 8 * 6, 8)][::-1])]
+        macString = ''.join(macFormat)
+
+        macunFormat = [''.join(['{:02x}'.format((uuid.getnode() >> ele) & 0xff) for ele in range(0, 8 * 6, 8)][::-1])]
+        macunString = ''.join(macunFormat)
+        with open(self.dir + 'rxLog_' + macunString[-6:] + '.txt', 'a') as f:
             # fairly jank MAC address reformatting
-            macFormat = [':'.join(['{:02x}'.format((uuid.getnode() >> ele) & 0xff) for ele in range(0, 8 * 6, 8)][::-1])]
-            macString = ''.join(macFormat)
             f.write('\n')
             f.write('==================================================\n')
             row = "New recording started at " + self.utcStr[1:] + " from machine with MAC of " + macString + ".\n"
@@ -168,7 +171,7 @@ class ezRxWindow(tk.Tk):
             f.write(row)
             row = "f_offset = " + str(self.offset_freq) + " Hz\n"
             f.write(row)
-            row = "filename for this sequence begins with: " + self.fname[0:6] + ">" + self.fname[7:-4] + "_0" + self.fname[-4:] + "\n"
+            row = "filename for this sequence begins with: " + self.fname[0:6] + ">" + self.fname[7:-4] + "_0_" + macunString[-6:] + self.fname[-4:] + "\n"
             f.write(row)
             row = "filesize cap: " + str(self.fileSizeCap) + " MB\n"
             f.write(row)
