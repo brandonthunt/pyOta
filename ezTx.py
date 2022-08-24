@@ -1,4 +1,6 @@
+#!/usr/bin/env python3
 import os.path
+import sys
 from txContinuous import txFromRadio as tfr
 import datetime as dt
 import queue
@@ -21,7 +23,7 @@ class ezRxWindow(tk.Tk):
     def __init__(self):
         # create tkinter window
         super().__init__()
-        self.geometry("200x360")
+        self.geometry("200x280")
 
         # initialize Queue and begin polling
         self.queue = queue.Queue()
@@ -180,4 +182,9 @@ class ezRxWindow(tk.Tk):
 
 # If we run this file as the main script...
 if __name__ == "__main__":
+    try:
+        sys.path.index('/usr/local/lib/python3/dist-packages/python')
+    except:
+        sys.path.append('/usr/local/lib/python3/dist-packages/python')
+
     ezRxWindow()

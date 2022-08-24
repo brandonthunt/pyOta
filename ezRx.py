@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 from rxContinuous import streamFromRadio as sfr
 import datetime as dt
 import queue
