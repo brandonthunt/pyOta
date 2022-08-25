@@ -153,6 +153,9 @@ class ezRxWindow(tk.Tk):
                     return
 
                 # Check hardware type and initialize
+                self.button['text'] = "Scanning equipment..."
+                self.button.configure(state="disabled")
+                self.update()
                 isHFRX = os.system("ping -c 1 " + HOST)
                 if isHFRX:
                     print("No numato controller found; HFRX detected")
