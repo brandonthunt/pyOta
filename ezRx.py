@@ -20,11 +20,13 @@ class ezRxWindow(tk.Tk):
     fname = []
     dir = 'rxBins/'
     fileSizeCap = 2 ** 9
+    isHFPRO = 0
 
     def __init__(self):
         # create tkinter window
         super().__init__()
         self.geometry("200x360")
+        self.title('Rx')
 
         # initialize Queue and begin polling
         self.queue = queue.Queue()
@@ -162,8 +164,8 @@ class ezRxWindow(tk.Tk):
                     # no code here; HFRX interfaces directly to laptop
                 else:
                     print("Numato controller found; HFPRO detected")
+                    self.isHFPRO = 1
                     self.button['text'] = "Connecting to HFPRO..."
-                    self.button.configure(state="disabled")
                     self.errLab['text'] = "Connecting..."
                     self.errLab['fg'] = "#aaa"
                     self.update()
@@ -211,6 +213,8 @@ class ezRxWindow(tk.Tk):
             row = "filesize cap: " + str(self.fileSizeCap) + " MB\n"
             f.write(row)
             row = "Recording time limit: " + str(self.recLenInput) + " min\n"
+            f.write(row)
+            row = "equipment type: " + ("HFPRO\n" if self.isHFPRO else "HFRX\n")
             f.write(row)
             f.write('==================================================\n')
 

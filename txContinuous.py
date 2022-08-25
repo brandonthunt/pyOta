@@ -1,5 +1,6 @@
 import tkinter as tk
 import uhd
+import telnetlib
 import numpy as np
 import queue
 import time
@@ -10,6 +11,8 @@ import struct       # for debug
 # ~~~ NOTE: Input .bin files are read as int32s with alternating real and imag samples ~~~
 # globals
 INIT_DELAY = 0.25               # Delay before transmission by 0.25 seconds to ensure to initial underruns occur
+TNSLEEP = 0.1
+ALLGPIO = [2, 3, 4, 5, 6, 7]
 
 # Create Object
 class txFromRadio(tk.Tk):
@@ -19,13 +22,16 @@ class txFromRadio(tk.Tk):
     was_clicked = False         # Is set to true upon button press. Ends recording after final pkt rx.
     pMod = 0.01                 # default power level to -20dB
     pwrVec = [1, 0.1, 0.01, 0.001, 0.0001]
+    pwrChangeFlag = 0
+    tn = []
 
     # misc radio params
     rx_channels = [0]
 
-    def __init__(self, tx_rate, fname, fc, tx_gain, debug, isPro=0):
+    def __init__(self, tx_rate, fname, fc, tx_gain, debug, isPro=0, tnHost=[]):
         # create tkinter window
         super().__init__()
+        self.geometry("200x320")
 
         # initialize radio
         self.tx_rate = tx_rate
@@ -101,13 +107,23 @@ class txFromRadio(tk.Tk):
         self.lab.pack(pady=15)
 
 
-        # create radio buttons for power control
+        # create radio buttons for power control - Change based on hardware!
         self.pSetIdx = tk.IntVar()
         self.pSetIdx.set(2)
-        textLab = ['0dB', '-10dB', '-20dB', '-30dB', '-40dB']
-        for idx, val in enumerate(self.pwrVec):
-            self.pSel = tk.Radiobutton(self, text=textLab[idx], variable=self.pSetIdx, value=idx, command=self.pSet)
-            self.pSel.pack(padx=0, pady=0)
+        if not isPro:
+            self.title('HFRX Tx')
+            textLab = ['0dB', '-10dB', '-20dB', '-30dB', '-40dB']
+            for idx, val in enumerate(self.pwrVec):
+                self.pSel = tk.Radiobutton(self, text=textLab[idx], variable=self.pSetIdx, value=idx, command=self.pSet)
+                self.pSel.pack(padx=0, pady=0)
+        else:
+            self.title('HF-PRO Tx')
+            self.tn = telnetlib.Telnet(tnHost)
+            self.pMod = 1                                               # clear programmatic attenuation
+            textLab = ['0dB', '-3dB', '-10dB', '-22dB', '-31.5dB']
+            for idx, val in enumerate(self.pwrVec):
+                self.pSel = tk.Radiobutton(self, text=textLab[idx], variable=self.pSetIdx, value=idx, command=self.pSetQueue)
+                self.pSel.pack(padx=0, pady=0)
 
         self.button = tk.Button(self, text="End transmission")
         self.button['command'] = self.on_click
@@ -127,14 +143,60 @@ class txFromRadio(tk.Tk):
     def pSet(self):
         self.pMod = self.pwrVec[self.pSetIdx.get()]
 
+    def pSetQueue(self):
+        self.queue.put('changePwrLvl')
+
+    def pSetPro(self, threads):
+        if self.pwrChangeFlag:
+            # first, set all GPIOs for maximum attenuation
+            print('in pSetPro')
+
+            self.telSetAll()
+
+            # then, lower GPIO that should be deactivated
+            lvl = self.pSetIdx.get()
+            if lvl == 0:
+                # no attenuation
+                self.telClearAll()
+            elif lvl == 1:
+                # -3 dB attenuation
+                self.telWrite("gpio clear 2")
+                self.telWrite("gpio clear 5")
+                self.telWrite("gpio clear 6")
+                self.telWrite("gpio clear 7")
+            elif lvl == 2:
+                # -10 dB attenuation
+                self.telWrite("gpio clear 2")
+                self.telWrite("gpio clear 3")
+                self.telWrite("gpio clear 5")
+                self.telWrite("gpio clear 7")
+            elif lvl == 3:
+                # -22 dB attenuation
+                self.telWrite("gpio clear 2")
+                self.telWrite("gpio clear 3")
+                self.telWrite("gpio clear 6")
+            elif lvl == 4:
+                # maximum attenuation; already at this level courtesy of telSetAll()
+                pass
+
+            self.pwrChangeFlag = 0
+            self.queue.put('pwrLvlSet')
+            self.after(100, self.checkQueue, threads)
+
+
     # use a "main" threading function to begin RX stream
     def threading(self, radio):
         threads = []        # empty list of threads
 
         # Call stream function
-        t1 = threading.Thread(target=self.txFromRad, args=[radio])
-        t1.start()
-        threads.append(t1)
+        self.t1 = threading.Thread(target=self.txFromRad, args=[radio])
+        self.t1.start()
+        threads.append(self.t1)
+
+        self.t2 = threading.Thread(target=self.pSetPro, args=[threads])
+        self.t2.start()
+        threads.append(self.t2)
+
         self.after(100, self.checkQueue, threads)
 
     def checkQueue(self, threads):
@@ -160,11 +222,30 @@ class txFromRadio(tk.Tk):
                 for thr in threads:
                     thr.join()
 
+                # reset Numato to Rx mode
+                if not self.tn == []:
+                    self.telWrite("reset")              # reset all relays upon exit
+                    self.telSetAll()                    # set all GPIO to maximize attenuation
+                    self.tn.close()
+
                 # close debugging file
                 if self.debug:
                     self.f2.close()
 
                 self.destroy()
+
+            #
+            elif self.result == 'changePwrLvl':
+                print('Change pwr lvl in queue')
+                self.pwrChangeFlag = 1
+                self.queue.task_done()
+                self.after(50, self.pSetPro, threads)
+
+            elif self.result == 'pwrLvlSet':
+                # self.t2.join()
+                self.queue.task_done()
+                self.after(100, self.checkQueue, threads)
+
             else:
                 # "catch" unknown queue elements.
                 print('unknown item in queue...')
@@ -194,7 +275,6 @@ class txFromRadio(tk.Tk):
 
         while not self.was_clicked:
             nsamps += streamer.send(tx_buffer, metadata)          # collect nsamps samples per loop
-
 
             # Handle circbuffering
             idx += buffer_samps
@@ -236,6 +316,25 @@ class txFromRadio(tk.Tk):
         usrp.set_tx_freq(uhd.types.TuneRequest(self.fc), 0)
         usrp.set_time_now(uhd.types.TimeSpec(0.0))
         return usrp
+
+    def telSetAll(self):
+        # set each GPIO
+        for kk in ALLGPIO:
+            msg = "gpio set {}\r\n".format(kk)
+            self.tn.write(msg.encode("ascii"))
+            time.sleep(TNSLEEP)
+
+    def telClearAll(self):
+        # set each GPIO
+        for kk in ALLGPIO:
+            msg = "gpio clear {}\r\n".format(kk)
+            self.tn.write(msg.encode("ascii"))
+            time.sleep(TNSLEEP)
+
+    def telWrite(self, msg):
+        msg = msg + "\r\n"
+        self.tn.write(msg.encode("ascii"))
+        time.sleep(TNSLEEP)
 
 class msgWindow(tk.Tk):
     def __init__(self, message, bgcolor="#DDD", fgcolor="#000"):

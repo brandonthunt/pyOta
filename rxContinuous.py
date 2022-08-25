@@ -32,6 +32,7 @@ class streamFromRadio(tk.Tk):
         # create tkinter window
         super().__init__()
         self.geometry("200x75")
+        self.title('Rx')
 
         # create labels and button
         self.lab = tk.Label(self, text="Filesize: ")

@@ -28,11 +28,14 @@ class ezRxWindow(tk.Tk):
     tx_gain = 0
     fname = []
     dir = 'txBins/'
+    isHFPRO = 0                             # default equipment type
+    tn = []                                 # empty telnet object buffer
 
     def __init__(self):
         # create tkinter window
         super().__init__()
         self.geometry("200x280")
+        self.title('Tx')
 
         # initialize Queue and begin polling
         self.queue = queue.Queue()
@@ -162,18 +165,22 @@ class ezRxWindow(tk.Tk):
                     return
 
                 # Check hardware type and initialize
+                self.txButton['text'] = "Scanning equipment..."
+                self.txButton.configure(state="disabled")
+                self.update()
                 isHFRX = os.system("ping -c 1 " + HOST)
                 if isHFRX:
                     print("No numato controller found; HFRX detected")
                     # no code here; HFRX interfaces directly to laptop
                 else:
                     print("Numato controller found; HFPRO detected")
+                    self.isHFPRO = 1
                     self.txButton['text'] = "Connecting to HFPRO..."
-                    self.txButton.configure(state="disabled")
                     self.statusLab['text'] = "Connecting..."
                     self.statusLab['fg'] = "#aaa"
                     self.update()
-                    self.initHFPRO()
+                    self.initHFPROtx()
+                    self.tn.close()
 
                 # Write to logger file
                 self.writeLog()
@@ -181,11 +188,13 @@ class ezRxWindow(tk.Tk):
                 # Destroy current window, spawn stream-record window from rxContinuous.py
                 self.queue.task_done()
                 self.destroy()
-                tfr(self.tx_rate,
-                    self.dir + self.fname,
-                    self.fc,
-                    self.tx_gain,
-                    0)
+                tfr(self.tx_rate,                   # transmit sampling rate
+                    self.dir + self.fname,          # filenme
+                    self.fc,                        # center frequency
+                    self.tx_gain,                   # transmit gain
+                    0,                              # debug enable
+                    self.isHFPRO,                   # are we using HFPRO or HFRX?
+                    HOST)                           # provide telnet object (or empty buffer if HFRX)
             else:
                 # "catch" unknown queue elements.
                 print('unknown item in queue...')
@@ -210,9 +219,11 @@ class ezRxWindow(tk.Tk):
             f.write(row)
             row = "selected file: " + self.fname + "\n"
             f.write(row)
+            row = "equipment type: " + ("HFPRO\n" if self.isHFPRO else "HFRX\n")
+            f.write(row)
             f.write('==================================================\n')
 
-    def initHFPRO(self):
+    def initHFPROtx(self):
         self.tn = telnetlib.Telnet(HOST)
         time.sleep(TNSLEEP)
         self.telRead("\n")
