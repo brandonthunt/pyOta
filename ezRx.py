@@ -80,6 +80,17 @@ class ezRxWindow(tk.Tk):
         try:
             fchz = float(self.fcbox.get("1.0", "end-1c"))
             self.fc = 1000 * fchz
+
+            # verify input falls into HF band
+            if self.fc > 30e6:
+                self.errLab['text'] = "Center freq. too high!"
+                self.errLab['fg'] = "#e00"
+                return 1
+            elif self.fc < 3e6:
+                self.errLab['text'] = "Center freq. too low!"
+                self.errLab['fg'] = "#e00"
+                return 1
+
         except ValueError:
             self.errLab['text'] = "Invalid center frequency!"
             self.errLab['fg'] = "#e00"
