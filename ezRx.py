@@ -1,10 +1,15 @@
 #!/usr/bin/env python3
 from rxContinuous import streamFromRadio as sfr
 import datetime as dt
+import os
+import telnetlib
+import time
 import queue
 import tkinter as tk
 import uuid
 
+HOST = "192.168.10.64"  # static IP of Numato controller
+TNSLEEP = 0.1  # sleep time after passing each command to block for telnet
 
 class ezRxWindow(tk.Tk):
     # --- attributes ---
@@ -147,6 +152,20 @@ class ezRxWindow(tk.Tk):
                     self.checkQueue()
                     return
 
+                # Check hardware type and initialize
+                isHFRX = os.system("ping -c 1 " + HOST)
+                if isHFRX:
+                    print("No numato controller found; HFRX detected")
+                    # no code here; HFRX interfaces directly to laptop
+                else:
+                    print("Numato controller found; HFPRO detected")
+                    self.button['text'] = "Connecting to HFPRO..."
+                    self.button.configure(state="disabled")
+                    self.errLab['text'] = "Connecting..."
+                    self.errLab['fg'] = "#aaa"
+                    self.update()
+                    self.initHFPROrx()
+
                 # Write to logger file
                 self.writeLog()
 
@@ -192,6 +211,24 @@ class ezRxWindow(tk.Tk):
             f.write(row)
             f.write('==================================================\n')
 
+    def initHFPROrx(self):
+        self.tn = telnetlib.Telnet(HOST)
+        time.sleep(TNSLEEP)
+        self.telRead("\n")
+
+        # - Set associated relays -
+        self.telWrite("reset")  # sets all relays == 0
+        self.tn.close()
+
+    def telRead(self, msg):
+        rxmsg = self.tn.read_until(msg.encode("ascii"))
+        time.sleep(TNSLEEP)
+        return str(rxmsg)
+
+    def telWrite(self, msg):
+        msg = msg + "\r\n"
+        self.tn.write(msg.encode("ascii"))
+        time.sleep(TNSLEEP)
 
 # If we run this file as the main script...
 if __name__ == "__main__":
