@@ -23,7 +23,7 @@ class txFromRadio(tk.Tk):
     # misc radio params
     rx_channels = [0]
 
-    def __init__(self, tx_rate, fname, fc, tx_gain, debug):
+    def __init__(self, tx_rate, fname, fc, tx_gain, debug, isPro=0):
         # create tkinter window
         super().__init__()
 

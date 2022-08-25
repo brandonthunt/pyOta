@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
+import os
 import os.path
 import sys
+import time
 from txContinuous import txFromRadio as tfr
 import datetime as dt
 import queue
@@ -8,8 +10,15 @@ import tkinter as tk
 from tkinter import ttk
 from tkinter import filedialog
 import uuid
+import telnetlib
 
-# tx_rate, fname, fc, tx_gain, debug
+HOST = "192.168.10.64"  # static IP of Numato controller
+TNSLEEP = 0.1  # sleep time after passing each command to block for telnet
+MINFREQ_6 = 20500000
+MINFREQ_5 = 13800000
+MINFREQ_4 = 10350000
+MINFREQ_3 = 7500000
+MINFREQ_2 = 5300000
 
 
 class ezRxWindow(tk.Tk):
@@ -77,7 +86,7 @@ class ezRxWindow(tk.Tk):
         # begin mainloop
         self.mainloop()
 
-    # Select CW checkbox
+    # --- Select CW checkbox ---
     def selCw(self):
         # self.fbButton.config(state=["disabled" if self.cwFlag.get() else "normal"])
         if self.cwFlag.get():
@@ -87,20 +96,20 @@ class ezRxWindow(tk.Tk):
         else:
             self.fbButton.configure(state="normal")
 
-    # filebrowser function
+    # --- filebrowser function ---
     def browseFiles(self):
         fnameAndDir = filedialog.askopenfilename(initialdir=self.dir,
                                                  title="Select Tx File",
                                                  filetypes=[("Waveform files", "*.bin")])
         try:
-            fname = os.path.basename(fnameAndDir)           # if filebrowser is closed, we get a TypeError
+            fname = os.path.basename(fnameAndDir)  # if filebrowser is closed, we get a TypeError
         except TypeError:
             fname = "Invalid Selection!"
 
         self.wvSelLab['text'] = fname
         self.fname = fname
 
-    # Tasks to perform on button click
+    # --- Tasks to perform on button click ---
     def on_click(self):
         self.was_clicked = True
         self.queue.put('start_tx')
@@ -132,7 +141,6 @@ class ezRxWindow(tk.Tk):
             self.statusLab['text'] = "Invalid filename!"
             self.statusLab['fg'] = "#e00"
 
-
     def checkQueue(self):
         """ Check if there is something in the queue. """
         try:
@@ -152,6 +160,20 @@ class ezRxWindow(tk.Tk):
                     self.queue.task_done()
                     self.checkQueue()
                     return
+
+                # Check hardware type and initialize
+                isHFRX = os.system("ping -c 1 " + HOST)
+                if isHFRX:
+                    print("No numato controller found; HFRX detected")
+                    # no code here; HFRX interfaces directly to laptop
+                else:
+                    print("Numato controller found; HFPRO detected")
+                    self.txButton['text'] = "Connecting to HFPRO..."
+                    self.txButton.configure(state="disabled")
+                    self.statusLab['text'] = "Connecting..."
+                    self.statusLab['fg'] = "#aaa"
+                    self.update()
+                    self.initHFPRO()
 
                 # Write to logger file
                 self.writeLog()
@@ -189,6 +211,73 @@ class ezRxWindow(tk.Tk):
             row = "selected file: " + self.fname + "\n"
             f.write(row)
             f.write('==================================================\n')
+
+    def initHFPRO(self):
+        self.tn = telnetlib.Telnet(HOST)
+        time.sleep(TNSLEEP)
+        self.telRead("\n")
+
+        #  - read state of internal/external amp select -
+        # NOTE: "read" command configures GPIO 0 as an input
+        while 1:
+            self.telWrite("gpio read 0")
+            state = str(self.tn.read_eager())
+            print(state)
+            if "0" in state:
+                # Use internal amp
+                isInternalAmp = 1
+                print('Using internal amp')
+                break
+            elif "1" in state:
+                # use external
+                isInternalAmp = 0
+                print('Using external amp')
+                break
+
+        # - Set associated relays -
+        self.telWrite("reset")  # sets all relays == 0
+        if isInternalAmp:
+            self.telWrite("relay on 1")  # turn on internal amplifier
+        else:
+            self.telWrite("relay on 0")  # Select external amplifier
+            self.telWrite("relay on 9")  # Select external RF path
+
+        # set static Tx relays
+        self.telWrite("relay on 8")  # select Tx hardware path
+        self.telWrite("relay on A")  # enable PTT (#A = 10 in Hex)
+
+        # Enable attenuator and set to max attenuation
+        self.telWrite("gpio set 1")  # enables attenuator
+        for k in range(2, 8):
+            self.telWrite("gpio set {}".format(k))  # enable each level of attenuation
+
+        # - Configure Filters! -
+        fc = self.fc
+        if fc >= MINFREQ_6:
+            filtSel = 6
+        elif fc >= MINFREQ_5:
+            filtSel = 5
+        elif fc >= MINFREQ_4:
+            filtSel = 4
+        elif fc >= MINFREQ_3:
+            filtSel = 3
+        elif fc >= MINFREQ_2:
+            filtSel = 2
+        else:
+            filtSel = 1
+
+        self.telWrite("relay on {}".format(filtSel+1))      # filter indexes are 1 higher than coresponding band
+
+
+    def telRead(self, msg):
+        rxmsg = self.tn.read_until(msg.encode("ascii"))
+        time.sleep(TNSLEEP)
+        return str(rxmsg)
+
+    def telWrite(self, msg):
+        msg = msg + "\r\n"
+        self.tn.write(msg.encode("ascii"))
+        time.sleep(TNSLEEP)
 
 
 # If we run this file as the main script...
