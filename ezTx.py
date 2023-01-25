@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+
+import globalConst as const # Access constants shared by RX and TX apps
 import os
 import os.path
 import sys
@@ -21,7 +23,7 @@ MINFREQ_3 = 7500000
 MINFREQ_2 = 5300000
 
 
-class ezRxWindow(tk.Tk):
+class ezTxWindow(tk.Tk):
     # --- attributes ---
     # empty list for streamed samples
     tx_rate = 100e6 / 100
@@ -125,11 +127,11 @@ class ezRxWindow(tk.Tk):
             self.fc = 1000 * fchz
 
             # verify input falls into HF band
-            if self.fc > 30e6:
+            if self.fc > const.MAX_CENTER_FREQ:
                 self.statusLab['text'] = "Center freq. too high!"
                 self.statusLab['fg'] = "#e00"
                 return 1
-            elif self.fc < 3e6:
+            elif self.fc < const.MIN_CENTER_FREQ:
                 self.statusLab['text'] = "Center freq. too low!"
                 self.statusLab['fg'] = "#e00"
                 return 1
@@ -298,4 +300,4 @@ if __name__ == "__main__":
     except:
         sys.path.append('/usr/local/lib/python3/dist-packages/python')
 
-    ezRxWindow()
+    ezTxWindow()

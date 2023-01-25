@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+
+import globalConst as const # Access constants shared by RX and TX apps
 from rxContinuous import streamFromRadio as sfr
 import datetime as dt
 import os
@@ -89,11 +91,11 @@ class ezRxWindow(tk.Tk):
             self.fc = 1000 * fchz
 
             # verify input falls into HF band
-            if self.fc > 30e6:
+            if self.fc > const.MAX_CENTER_FREQ:
                 self.errLab['text'] = "Center freq. too high!"
                 self.errLab['fg'] = "#e00"
                 return 1
-            elif self.fc < 3e6:
+            elif self.fc < const.MIN_CENTER_FREQ:
                 self.errLab['text'] = "Center freq. too low!"
                 self.errLab['fg'] = "#e00"
                 return 1
