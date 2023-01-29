@@ -20,7 +20,7 @@ class ezRxWindow(tk.Tk):
     offset_freq = 0
     rx_rate = 100e6 / 100
     fname = []
-    dir = 'rxBins/'
+    dir = '../rxBins/'
     fileSizeCap = 2 ** 9
     isHFPRO = 0
 

@@ -29,7 +29,7 @@ class ezTxWindow(tk.Tk):
     tx_rate = 100e6 / 100
     tx_gain = 0
     fname = []
-    dir = 'txBins/'
+    dir = '../txBins/'
     isHFPRO = 0                             # default equipment type
     tn = []                                 # empty telnet object buffer
 
