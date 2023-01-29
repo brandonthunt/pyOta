@@ -17,7 +17,7 @@ class ezRxWindow(tk.Tk):
     # --- attributes ---
     # empty list for streamed samples
     rx_gain = 8
-    offset_freq = 100000
+    offset_freq = 0
     rx_rate = 100e6 / 100
     fname = []
     dir = 'rxBins/'
