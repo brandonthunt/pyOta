@@ -2,5 +2,5 @@
 rxBins/
 txBins/txLog*
 !txBins/cw.bin
-
+__pycache__/
 .idea/
